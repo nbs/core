@@ -1,16 +1,13 @@
 <?php
-
 /**
  * Fuel is a fast, lightweight, community driven PHP5 framework.
  *
- * Class used to server up the email
- *
- * @package		Fuel
- * @version		1.0
- * @author		DudeAmI aka Kris <dudeami0@gmail.com>
- * @license		MIT License
- * @copyright	2010 - 2011 Fuel Development Team
- * @link		http://fuelphp.com
+ * @package    Fuel
+ * @version    1.0
+ * @author     Fuel Development Team
+ * @license    MIT License
+ * @copyright  2010 - 2011 Fuel Development Team
+ * @link       http://fuelphp.com
  */
 
 namespace Fuel\Core;
@@ -19,200 +16,202 @@ namespace Fuel\Core;
 
 class Email {
 
+	/**
+	 * @var  Email_Driver  Keeps an instance to work with for static usage, is reset after send
+	 */
 	protected static $_instance = null;
 
+	/**
+	 * @var  string  debug info from the last email send through static usage
+	 */
+	protected static $_debug = null;
+
+	/**
+	 * Returns the current instance for static usage or creates a new one when empty
+	 *
+	 * @return  Email_Driver
+	 */
 	public static function instance()
 	{
 		if (static::$_instance == null)
 		{
 			static::$_instance = static::factory();
 		}
+
 		return static::$_instance;
 	}
 
 	/**
 	 * Creates a new instance of the email driver
 	 *
-	 * @param	array	$config
+	 * @param   array  $config
 	 * @return  Email_Driver
 	 */
-	public static function factory($config = array())
+	public static function factory(array $config = array())
 	{
-		$initconfig = Config::load('email');
+		$defaults = Config::load('email', array());
 
-		if (is_array($config) && is_array($initconfig))
-		{
-			$config = array_merge($initconfig, $config);
-		}
-
-		$protocol = ucfirst( ! empty($config['protocol']) ? $config['protocol'] : 'mail');
-		$class = 'Email_' . $protocol;
+		$config   = $config + $defaults;
+		$protocol = ! empty($config['protocol']) ? $config['protocol'] : 'mail';
+		$class    = 'Email_'.\Str::ucfirst($protocol);
 		if ($protocol == 'Driver' || ! class_exists($class))
 		{
-			throw new \Fuel_Exception('Protocol ' . $protocol . ' is not a valid protocol for emailing.');
+			throw new \RuntimeException('Protocol '.$protocol.' is not a valid protocol for emailing.');
 		}
-		return new $class($config);
+
+		return $class::factory($config);
 	}
 
 	/**
-	 * Used to set class information.
+	 * Add a header to the email
 	 *
-	 * @param	array	$config		An array of configuration settings.
+	 * @param   string  header name
+	 * @param   string  header value
+	 * @param   bool    whether to overwrite a current one when already set
+	 * @return  Email_Driver|array
 	 */
-	public function init($config = array())
+	public static function add_header()
 	{
-		return static::instance()->init($config);
+		return call_user_func_array(array(static::instance(), 'add_header'), func_get_args());
 	}
 
 	/**
-	 * Adds a direct recipient
+	 * Adds a direct recipient, no args to fetch current ones
 	 *
-	 * @param	string	$address	A single email, a comma seperated list of emails, or an array of emails
-	 * @return	Email_Driver
+	 * @param   string|array  recipient email or array(name, email)
+	 * @param   string|array  ... another recipients to add, etc...
+	 * @return  Email_Driver|array
 	 */
-	public static function to($address)
+	public static function to()
 	{
-		return static::instance()->to($address);
+		return call_user_func_array(array(static::instance(), 'to'), func_get_args());
 	}
 
 	/**
-	 * Adds a carbon copy recipient
+	 * Adds a cc recipient, no args to fetch current ones
 	 *
-	 * @param	string	$address	A single email, a comma seperated list of emails, or an array of emails
-	 * @return	Email_Driver
+	 * @param   string|array  recipient email or array(name, email)
+	 * @param   string|array  ... another recipients to add, etc...
+	 * @return  Email_Driver|array
 	 */
-	public static function cc($address)
+	public static function cc()
 	{
-		return static::instance()->cc($address);
+		return call_user_func_array(array(static::instance(), 'cc'), func_get_args());
 	}
 
 	/**
-	 * Adds a blind carbon copy recipient
+	 * Adds a bcc recipient, no args to fetch current ones
 	 *
-	 * @param	string	$address	A single email, a comma seperated list of emails, or an array of emails
-	 * @return	Email_Driver
+	 * @param   string|array  recipient email or array(name, email)
+	 * @param   string|array  ... another recipients to add, etc...
+	 * @return  Email_Driver|array
 	 */
-	public static function bcc($address)
+	public static function bcc()
 	{
-		return static::instance()->bcc($address);
+		return call_user_func_array(array(static::instance(), 'bcc'), func_get_args());
 	}
 
 	/**
-	 * Sets the subject of the email.
+	 * Sets the sender, no args to fetch current one
 	 *
-	 * @param	string	$subject	The subject of the email.
-	 * @return	Email_Driver
+	 * @param   string       The email address of the sender or name (when name: address must be second)
+	 * @param   string|null  Emailaddress of the sender when first arg was name
+	 * @return  Email_Driver|string
 	 */
-	public static function from($address, $name = '')
+	public static function from()
 	{
-		return static::instance()->from($address, $name);
+		return call_user_func_array(array(static::instance(), 'from'), func_get_args());
 	}
 
 	/**
-	 * Sets the subject of the email.
+	 * Set the subject, no args to fetch current one
 	 *
-	 * @param	string	$subject
-	 * @return	Email_Driver
+	 * @param   string  the subject
+	 * @return  Email_Driver|string
 	 */
-	public static function subject($subject)
+	public static function subject()
 	{
-		return static::instance()->subject($subject);
+		return call_user_func_array(array(static::instance(), 'subject'), func_get_args());
 	}
 
 	/**
-	 * Sets a header for the email.
-	 * @param	string		$index		The name of the header
-	 * @param	string		$value		The value of the header
-	 * @param	boolean		$override	Decides if it should write over existing headers or not.
-	 */
-	public static function set_header($index, $value, $override = true)
-	{
-		return static::instance()->set_header($index, $value, $override);
-	}
-
-	/**
-	 * Sets the message of the email, content type is determined by 'mailtype'
+	 * Set the content, no args to fetch current ones
 	 *
-	 * @param	string	$content
-	 * @return	Email_Driver
+	 * @param   string  the content
+	 * @return  Email_Driver
 	 */
-	public static function message($content)
+	public static function content()
 	{
-		return static::instance()->message($content);
+		return call_user_func_array(array(static::instance(), 'content'), func_get_args());
 	}
 
 	/**
-	 * Sets the alternative message for the email. HTML if 'mailtype' is Plain Text, and viceversa.
+	 * Add string to the content
 	 *
-	 * @param	string	$content
-	 * @return	Email_Driver
+	 * @param   string  the content to add
+	 * @return  Email_Driver
 	 */
-	public static function set_alt_message($content)
+	public static function add_content($content)
 	{
-		return static::instance()->set_alt_message($content);
+		return static::instance()->add_content($content);
 	}
 
 	/**
-	 * Sets the HTML content to place into the email.
+	 * Set the alternative content, no args to fetch current ones
 	 *
-	 * @param	string	$html	The emails HTML
-	 * @return	Email_Driver
+	 * @param   string  the alt content
+	 * @return  Email_Driver
 	 */
-	public static function html($html)
+	public static function alt_content($content)
 	{
-		return static::instance()->html($html);
+		return call_user_func_array(array(static::instance(), 'alt_content'), func_get_args());
 	}
 
 	/**
-	 * Sets the Plain Text content to place into the email.
+	 * Add string to the alt content
 	 *
-	 * @param	string	$html	The emails Plain Text
-	 * @return	Email_Driver
+	 * @param   string  the content to add
+	 * @return  Email_Driver
 	 */
-	public static function text($text)
+	public static function add_alt_content($content)
 	{
-		return static::instance()->text($text);
+		return static::instance()->add_alt_content($content);
 	}
 
 	/**
 	 * Sends the email.
 	 *
-	 * @return	boolean		True if success, false if failure.
+	 * @return  bool  success
 	 */
 	public static function send()
 	{
-		return static::instance()->send();
+		$email = static::instance();
+		static::$_instance = null;
+		static::$_debug    = $email->debug();
+
+		return $email->send();
 	}
 
 	/**
-	 * Attaches a file in the local filesystem to the email.
+	 * Attaches a file in the local filesystem to the email
 	 *
-	 * @param	string	$filename		The file to be used.
-	 * @param	string	$disposition	Defaults to attachment, can also be inline?
+	 * @param   string  The file to be used
+	 * @return  Email_Driver
 	 */
-	public static function attach($filename, $disposition = 'attachment')
+	public static function attach($filename)
 	{
-		return static::instance()->attach($filename, $disposition);
+		return static::instance()->attach($filename);
 	}
 
 	/**
-	 * Dynamically attaches a file to the email.
+	 * Returns the debugging string
 	 *
-	 * @param	string	$contents		The contents of the attachment
-	 * @param	string	$filename		The filename to use in the email
-	 * @param	string	$disposition	Defaults to attachment, can also be inline?
+	 * @return  string|null
 	 */
-	public static function dynamic_attach($contents, $filename, $disposition = 'attachment')
+	public static function debug()
 	{
-		return static::instance()->dynamic_attach($contents, $filename, $disposition);
+		return static::$_debug;
 	}
-
-	/**
-	 * Prints the debugger.
-	 */
-	public static function print_debugger()
-	{
-		echo static::instance()->print_debugger();
-	}
-
 }
+
+// end of file email.php
