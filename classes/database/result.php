@@ -162,6 +162,12 @@ abstract class Database_Result implements \Countable, \Iterator, \SeekableIterat
 
 		$this->rewind();
 
+                if(is_array($results)) {
+            
+                    array_walk_recursive($results, create_function('&$val', '$val = stripslashes($val);'));
+                    
+                }
+
 		return $results;
 	}
 
